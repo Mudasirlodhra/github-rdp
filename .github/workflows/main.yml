@@ -1,0 +1,51 @@
+name: Windows RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp:
+    runs-on: windows-2022
+    timeout-minutes: 360
+
+    steps:
+      - name: Enable Remote Desktop
+        shell: powershell
+        run: |
+          Write-Host "Enabling Remote Desktop..."
+
+          Set-ItemProperty `
+            -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" `
+            -Name "fDenyTSConnections" `
+            -Value 0
+
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+          Set-Service -Name TermService -StartupType Automatic
+          Start-Service TermService
+
+          Write-Host "Remote Desktop enabled."
+
+      - name: Show Windows information
+        shell: powershell
+        run: |
+          Write-Host "Computer:"
+          hostname
+
+          Write-Host "Windows:"
+          Get-CimInstance Win32_OperatingSystem |
+            Select-Object Caption, Version
+
+          Write-Host "User:"
+          whoami
+
+      - name: Keep runner alive
+        shell: powershell
+        run: |
+          Write-Host "Windows runner is running."
+          Write-Host "Maximum runtime is limited by GitHub."
+
+          for ($i = 1; $i -le 350; $i++) {
+              Write-Host "RDP session running: $i minutes"
+              Start-Sleep -Seconds 60
+          }
