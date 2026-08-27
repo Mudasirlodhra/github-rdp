@@ -1,0 +1,30 @@
+- name: Create RDP User
+  shell: powershell
+  env:
+    RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+  run: |
+    $username = "mudasirrdp"
+    $securePassword = ConvertTo-SecureString $env:RDP_PASSWORD -AsPlainText -Force
+
+    if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
+        Set-LocalUser -Name $username -Password $securePassword
+    } else {
+        New-LocalUser `
+          -Name $username `
+          -Password $securePassword `
+          -PasswordNeverExpires `
+          -AccountNeverExpires `
+          -UserMayNotChangePassword
+    }
+
+    Add-LocalGroupMember -Group "Administrators" -Member $username -ErrorAction SilentlyContinue
+
+    Set-ItemProperty `
+      -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" `
+      -Name "fDenyTSConnections" `
+      -Value 0
+
+    Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    Write-Host "Username: $username"
+    Write-Host "Password: GitHub Secret RDP_PASSWORD"
